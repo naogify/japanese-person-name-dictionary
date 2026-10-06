@@ -5,7 +5,7 @@
 //   node scripts/build.mjs            .cache/ に無い出典を取得して data/ を生成
 //   node scripts/build.mjs --offline  取得せず .cache/ と data/wikidata/ だけで生成（再現確認用）
 // 出力: data/surnames.txt, data/given-names.txt（1行1語・畳み込み済み・重複なし）, data/sources.json
-// 出典: UniDic small（SudachiDict small_lex.csv）/ mecab-ipadic 2.7.0 Noun.name.csv / Wikidata
+// 出典: UniDic small（SudachiDict small_lex.csv）/ mecab-ipadic 2.7.0 Noun.name.csv / Mozc OSS 辞書 / Wikidata
 // ============================================================================
 import fs from 'node:fs';
 import path from 'node:path';
@@ -29,6 +29,24 @@ const IPADIC = {
   version: '2.7.0-20070801',
   url: 'https://sourceforge.net/projects/mecab/files/mecab-ipadic/2.7.0-20070801/mecab-ipadic-2.7.0-20070801.tar.gz/download',
   sha256: 'b62f527d881c504576baed9c6ef6561554658b175ce6ae0096a60307e49e3523',
+};
+/** Mozc OSS 辞書（コミット SHA で固定。ファイルごとの sha256 も固定） */
+const MOZC = {
+  commit: '60fe4012e5eaa26805dbbb8e5548cbe6db4aaf98',
+  base: 'https://raw.githubusercontent.com/google/mozc/60fe4012e5eaa26805dbbb8e5548cbe6db4aaf98/src/data/dictionary_oss/',
+  files: {
+    'id.def': '07a05a268c3783b7e02b36e4aa591555a2dd19a1f3c93891576740761c154f2d',
+    'dictionary00.txt': '9e07ce292932c4fff327ed8cb06274c09acca556bd8bdf7c7ef1f6173eae3b61',
+    'dictionary01.txt': '836fd5fd8399510de0d8ef7b33be913cca6bbaee7b712cc8045fba03f4c75a89',
+    'dictionary02.txt': '93943858d0cfd092b849a78def6901eaf228177e1ac5663544e865a3a1e45a9e',
+    'dictionary03.txt': 'cb9f1b0b4a7550d682d86244a021cd17e0b15366328819e69135b5f183a1a24b',
+    'dictionary04.txt': '9fdc4e3948d03463de13ab5782adffbc11dd06e934cb80138c5920029cd3d2f6',
+    'dictionary05.txt': '199e3b0f050b691823ae7ba943090d437f51af6436b27c5f3dc69cafa12000e4',
+    'dictionary06.txt': 'b95b14f7770ae2a824bc8e9fad8b03c1bc45c504f93a36554b8b56daa0368d2a',
+    'dictionary07.txt': '7f53649b529d4c8c495d3a8dd9c4d489dfe7696080f7423107ff01331174be48',
+    'dictionary08.txt': '50a31bb5fc1646721b00be371a5695dffab1292bda143e1e59cc70cbbdd8643f',
+    'dictionary09.txt': '4e5fcd4cbfbf11395166a37b506f547fc54d20edc0884f5184ecd3fc705f0d9a',
+  },
 };
 const SPARQL = 'https://query.wikidata.org/sparql';
 
@@ -107,6 +125,36 @@ async function readIpadic() {
 }
 
 /**
+ * Mozc OSS 辞書（dictionary00〜09.txt）から人名の姓・名の表記を抜く。
+ * 列は「読み TAB 左文脈ID TAB 右文脈ID TAB コスト TAB 表記」。左文脈 ID が id.def で
+ * 「名詞,固有名詞,人名,姓」「名詞,固有名詞,人名,名」になっている行を拾う（ID 番号は版で変わるので id.def から引く）。
+ * @returns {Promise<{surnames: string[], givenNames: string[]}>}
+ */
+async function readMozc() {
+  const dir = path.join(CACHE, 'mozc', MOZC.commit);
+  for (const [name, hash] of Object.entries(MOZC.files)) {
+    await fetchPinned({ url: MOZC.base + name, sha256: hash }, path.join(dir, name));
+  }
+  // id.def（「ID 品詞,…」）から姓・名の ID を引く
+  const ids = { surname: null, given: null };
+  for (const line of fs.readFileSync(path.join(dir, 'id.def'), 'utf-8').split('\n')) {
+    const [id, pos] = line.split(' ');
+    if (pos === '名詞,固有名詞,人名,姓,*,*,*') ids.surname = id;
+    if (pos === '名詞,固有名詞,人名,名,*,*,*') ids.given = id;
+  }
+  if (!ids.surname || !ids.given) throw new Error('id.def に姓・名の品詞 ID が無い');
+  const out = { surnames: [], givenNames: [] };
+  for (const name of Object.keys(MOZC.files).filter((n) => n.startsWith('dictionary'))) {
+    for (const line of fs.readFileSync(path.join(dir, name), 'utf-8').split('\n')) {
+      const c = line.split('\t');
+      if (c[1] === ids.surname) out.surnames.push(c[4]);
+      else if (c[1] === ids.given) out.givenNames.push(c[4]);
+    }
+  }
+  return out;
+}
+
+/**
  * SPARQL を実行して日本語ラベルの一覧を返す。結果は data/wikidata/ にスナップショットとして保存し、
  * --offline のときはそれを読む（Wikidata は日々変わるので再現性のためコミットする）。
  * @param {string} name queries/ のファイル名（拡張子なし）と data/wikidata/ のファイル名
@@ -143,12 +191,14 @@ function normalizeAll(words) {
 
 const unidic = await readUnidicSmall();
 const ipadic = await readIpadic();
+const mozc = await readMozc();
 const wd = { surnames: await readWikidata('surnames'), givenNames: await readWikidata('given-names') };
 
 // 出典ごとの集合（件数の記録用）と、その和集合
 const per = {
   'unidic-small': { surnames: normalizeAll(unidic.surnames), givenNames: normalizeAll(unidic.givenNames) },
   ipadic: { surnames: normalizeAll(ipadic.surnames), givenNames: normalizeAll(ipadic.givenNames) },
+  mozc: { surnames: normalizeAll(mozc.surnames), givenNames: normalizeAll(mozc.givenNames) },
   wikidata: { surnames: normalizeAll(wd.surnames), givenNames: normalizeAll(wd.givenNames) },
 };
 const union = (key) => new Set(Object.values(per).flatMap((p) => [...p[key]]));
@@ -170,6 +220,9 @@ const meta = {
       version: SUDACHI.version, url: SUDACHI.url, sha256: SUDACHI.sha256, fetchedAt: today, licenseFile: 'LICENSES/UniDic-BSD.txt' },
     { id: 'ipadic', description: 'mecab-ipadic 2.7.0-20070801 Noun.name.csv（名詞,固有名詞,人名,姓/名）', license: 'NAIST/ICOT 条項',
       version: IPADIC.version, url: IPADIC.url, sha256: IPADIC.sha256, fetchedAt: today, licenseFile: 'LICENSES/mecab-ipadic-NAIST-ICOT.txt' },
+    { id: 'mozc', description: 'Mozc OSS 辞書 dictionary00〜09.txt の 名詞,固有名詞,人名,姓/名（左文脈 ID を id.def から引く）', license: 'Google の3条項BSD ＋ NAIST/ICOT 条項 ＋ 沖縄辞書（パブリックドメイン）',
+      version: MOZC.commit, url: MOZC.base, sha256: MOZC.files, fetchedAt: today, licenseFile: 'LICENSES/Mozc-BSD-3.txt',
+      licenseFiles: ['LICENSES/Mozc-BSD-3.txt', 'LICENSES/Mozc-NAIST-ICOT.txt', 'LICENSES/Okinawa-PD.txt'] },
     { id: 'wikidata', description: 'Wikidata の日本語ラベル（姓 Q101352、名 Q202444/Q12308941/Q11879590/Q3409032）', license: 'CC0 1.0',
       version: 'SPARQL スナップショット', url: SPARQL, query: 'scripts/queries/', snapshot: 'data/wikidata/', fetchedAt: today, licenseFile: 'LICENSES/Wikidata-CC0.txt' },
   ].map((s) => ({ ...s, counts: { surnames: per[s.id].surnames.size, givenNames: per[s.id].givenNames.size } })),
@@ -180,7 +233,8 @@ const metaPath = path.join(DATA, 'sources.json');
 if (OFFLINE && fs.existsSync(metaPath)) {
   const old = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
   meta.generatedAt = old.generatedAt;
-  meta.sources.forEach((s, i) => { s.fetchedAt = old.sources[i].fetchedAt; });
+  // 出典の並びが変わっても取り違えないよう id で引く（古い meta に無い出典は今日の日付のまま）
+  meta.sources.forEach((s) => { s.fetchedAt = old.sources.find((o) => o.id === s.id)?.fetchedAt ?? s.fetchedAt; });
 }
 fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2) + '\n');
 console.log(JSON.stringify(meta.sources.map((s) => [s.id, s.counts])), meta.total);

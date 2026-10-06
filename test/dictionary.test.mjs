@@ -11,6 +11,9 @@ test('辞書の件数が出典の記録と合う', () => {
   assert.equal(surnames.size, meta.total.surnames);
   assert.equal(givenNames.size, meta.total.givenNames);
   assert.ok(surnames.size > 10000 && givenNames.size > 20000);
+  // Mozc の人名（姓・名）が取り込まれている
+  const mozc = meta.sources.find((s) => s.id === 'mozc');
+  assert.ok(mozc.counts.surnames > 90000 && mozc.counts.givenNames > 40000);
 });
 
 test('全語が畳み込み済みで、漢字・かなだけでできている', () => {
@@ -29,5 +32,8 @@ test('fold は異体字を代表字に寄せ、全角英数を半角にする', 
 });
 
 test('出典ごとにライセンス全文のファイルがある', () => {
-  for (const s of meta.sources) assert.ok(fs.existsSync(new URL(`../${s.licenseFile}`, import.meta.url)), s.id);
+  for (const s of meta.sources) {
+    // 出典が複数の条項を持つとき（Mozc）は licenseFiles の全部が要る
+    for (const f of s.licenseFiles ?? [s.licenseFile]) assert.ok(fs.existsSync(new URL(`../${f}`, import.meta.url)), `${s.id}: ${f}`);
+  }
 });
