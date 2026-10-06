@@ -1,8 +1,0 @@
-Mozc（google/mozc）の LICENSE の第3節: Files: src/data/dictionary* — 沖縄辞書（パブリックドメイン）
-出典: https://github.com/google/mozc/blob/60fe4012e5eaa26805dbbb8e5548cbe6db4aaf98/LICENSE （原文のうち該当の節をそのまま切り出した）
-
-Files: src/data/dictionary*
-
-Public Domain Dataです。使用・変更・配布に関しては一切の制限をつけません。
-商品などに組み込むことも自由に行なってください。すでにいくつかの辞書には沖縄辞書が採用されています。
-勝手ながら、沖縄辞書に寄贈された辞書も in the Public Domain' 扱いとさせていただきます。

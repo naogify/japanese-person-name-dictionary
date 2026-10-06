@@ -1,7 +1,7 @@
 {
   "name": "@naogify/japanese-person-name-dictionary",
   "version": "0.1.0",
-  "description": "日本人の姓・名の辞書（UniDic small・mecab-ipadic・Mozc・Wikidata から生成）",
+  "description": "日本人の姓・名の辞書（Mozc・SudachiDict・UniDic small・mecab-ipadic・Wikidata から生成）",
   "license": "SEE LICENSE IN README.md",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "./given-names.txt": "./data/given-names.txt",
     "./sources.json": "./data/sources.json"
   },
-  "files": ["src", "data", "scripts/fold.mjs", "LICENSES", "LICENSE", "README.md"],
+  "files": ["src", "data", "scripts/fold.mjs", "LICENSES", "THIRD_PARTY_NOTICES.md", "LICENSE", "README.md"],
   "engines": { "node": ">=20" },
   "scripts": {
     "build": "node scripts/build.mjs",

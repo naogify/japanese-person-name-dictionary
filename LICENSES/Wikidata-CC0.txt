@@ -1,5 +1,0 @@
-Wikidata — CC0 1.0 全世界（パブリックドメイン提供）
-Wikidata の構造化データは CC0 1.0 で提供されている。
-https://www.wikidata.org/wiki/Wikidata:Licensing
-https://creativecommons.org/publicdomain/zero/1.0/deed.ja
-本リポジトリの data/wikidata/ は、scripts/queries/ の SPARQL を https://query.wikidata.org/sparql で実行した日本語ラベルのスナップショット。
