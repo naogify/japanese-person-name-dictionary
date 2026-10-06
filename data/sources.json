@@ -1,0 +1,53 @@
+{
+  "generatedAt": "2026-10-06",
+  "note": "件数は畳み込み・フィルタ・重複除去のあと。語そのものはここに載せない",
+  "sources": [
+    {
+      "id": "unidic-small",
+      "description": "UniDic small（SudachiDict small_lex.csv の 名詞,固有名詞,人名,姓/名）",
+      "license": "BSD-3-Clause（UniDic Consortium）",
+      "version": "20260723",
+      "url": "https://d2ej7fkh96fzlu.cloudfront.net/sudachidict-raw/20260723/small_lex.zip",
+      "sha256": "b578ac9545899783d5d7e30d5d78d5d9dcf40b36965d4af0663ec2eb041c1093",
+      "fetchedAt": "2026-10-06",
+      "licenseFile": "LICENSES/UniDic-BSD.txt",
+      "counts": {
+        "surnames": 15324,
+        "givenNames": 30035
+      }
+    },
+    {
+      "id": "ipadic",
+      "description": "mecab-ipadic 2.7.0-20070801 Noun.name.csv（名詞,固有名詞,人名,姓/名）",
+      "license": "NAIST/ICOT 条項",
+      "version": "2.7.0-20070801",
+      "url": "https://sourceforge.net/projects/mecab/files/mecab-ipadic/2.7.0-20070801/mecab-ipadic-2.7.0-20070801.tar.gz/download",
+      "sha256": "b62f527d881c504576baed9c6ef6561554658b175ce6ae0096a60307e49e3523",
+      "fetchedAt": "2026-10-06",
+      "licenseFile": "LICENSES/mecab-ipadic-NAIST-ICOT.txt",
+      "counts": {
+        "surnames": 11864,
+        "givenNames": 17640
+      }
+    },
+    {
+      "id": "wikidata",
+      "description": "Wikidata の日本語ラベル（姓 Q101352、名 Q202444/Q12308941/Q11879590/Q3409032）",
+      "license": "CC0 1.0",
+      "version": "SPARQL スナップショット",
+      "url": "https://query.wikidata.org/sparql",
+      "query": "scripts/queries/",
+      "snapshot": "data/wikidata/",
+      "fetchedAt": "2026-10-06",
+      "licenseFile": "LICENSES/Wikidata-CC0.txt",
+      "counts": {
+        "surnames": 9754,
+        "givenNames": 23804
+      }
+    }
+  ],
+  "total": {
+    "surnames": 20508,
+    "givenNames": 50033
+  }
+}

@@ -1,0 +1,7 @@
+# 日本語の姓（instance of 姓 Q101352、言語 Q5287=日本語）の日本語ラベルを返す
+SELECT DISTINCT ?label WHERE {
+  ?item wdt:P31 wd:Q101352 ;
+        wdt:P407 wd:Q5287 ;
+        rdfs:label ?label .
+  FILTER(LANG(?label) = "ja")
+}

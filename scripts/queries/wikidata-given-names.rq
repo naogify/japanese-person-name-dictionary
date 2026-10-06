@@ -1,0 +1,7 @@
+# 名（Q202444 名／Q12308941 男性名／Q11879590 女性名／Q3409032 中性名）の日本語ラベルを返す
+SELECT DISTINCT ?label WHERE {
+  VALUES ?type { wd:Q202444 wd:Q12308941 wd:Q11879590 wd:Q3409032 }
+  ?item wdt:P31 ?type ;
+        rdfs:label ?label .
+  FILTER(LANG(?label) = "ja")
+}

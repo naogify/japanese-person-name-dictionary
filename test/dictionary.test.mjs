@@ -1,0 +1,31 @@
+// 生成物の健全性テスト（語そのものは書かず、件数・形式・出典ファイルの有無だけを見る）
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { loadDictionary, fold } from '../src/index.mjs';
+
+const { surnames, givenNames } = loadDictionary();
+const meta = JSON.parse(fs.readFileSync(new URL('../data/sources.json', import.meta.url), 'utf-8'));
+
+test('辞書の件数が出典の記録と合う', () => {
+  assert.equal(surnames.size, meta.total.surnames);
+  assert.equal(givenNames.size, meta.total.givenNames);
+  assert.ok(surnames.size > 10000 && givenNames.size > 20000);
+});
+
+test('全語が畳み込み済みで、漢字・かなだけでできている', () => {
+  const re = /^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}々〆ヶー]+$/u;
+  for (const w of [...surnames, ...givenNames]) {
+    assert.equal(fold(w), w);
+    assert.match(w, re);
+  }
+});
+
+test('fold は異体字を代表字に寄せ、全角英数を半角にする', () => {
+  assert.equal(fold('髙'), '高');
+  assert.equal(fold('Ａ１'), 'A1');
+});
+
+test('出典ごとにライセンス全文のファイルがある', () => {
+  for (const s of meta.sources) assert.ok(fs.existsSync(new URL(`../${s.licenseFile}`, import.meta.url)), s.id);
+});
