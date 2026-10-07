@@ -3,14 +3,71 @@
   "note": "件数は畳み込み・フィルタ・重複除去のあと。語そのものはここに載せない",
   "sources": [
     {
+      "id": "mozc",
+      "description": "Mozc OSS 辞書 dictionary00〜09.txt の 名詞,固有名詞,人名,姓/名（左文脈 ID を id.def から引く）",
+      "license": "Google の3条項BSD ＋ NAIST/ICOT 条項 ＋ 沖縄辞書（パブリックドメイン）",
+      "version": "60fe4012e5eaa26805dbbb8e5548cbe6db4aaf98",
+      "url": "https://raw.githubusercontent.com/google/mozc/60fe4012e5eaa26805dbbb8e5548cbe6db4aaf98/src/data/dictionary_oss/",
+      "sha256": {
+        "id.def": "07a05a268c3783b7e02b36e4aa591555a2dd19a1f3c93891576740761c154f2d",
+        "dictionary00.txt": "9e07ce292932c4fff327ed8cb06274c09acca556bd8bdf7c7ef1f6173eae3b61",
+        "dictionary01.txt": "836fd5fd8399510de0d8ef7b33be913cca6bbaee7b712cc8045fba03f4c75a89",
+        "dictionary02.txt": "93943858d0cfd092b849a78def6901eaf228177e1ac5663544e865a3a1e45a9e",
+        "dictionary03.txt": "cb9f1b0b4a7550d682d86244a021cd17e0b15366328819e69135b5f183a1a24b",
+        "dictionary04.txt": "9fdc4e3948d03463de13ab5782adffbc11dd06e934cb80138c5920029cd3d2f6",
+        "dictionary05.txt": "199e3b0f050b691823ae7ba943090d437f51af6436b27c5f3dc69cafa12000e4",
+        "dictionary06.txt": "b95b14f7770ae2a824bc8e9fad8b03c1bc45c504f93a36554b8b56daa0368d2a",
+        "dictionary07.txt": "7f53649b529d4c8c495d3a8dd9c4d489dfe7696080f7423107ff01331174be48",
+        "dictionary08.txt": "50a31bb5fc1646721b00be371a5695dffab1292bda143e1e59cc70cbbdd8643f",
+        "dictionary09.txt": "4e5fcd4cbfbf11395166a37b506f547fc54d20edc0884f5184ecd3fc705f0d9a"
+      },
+      "fetchedAt": "2026-10-06",
+      "licenseFiles": [
+        "LICENSES/Mozc-LICENSE.txt"
+      ],
+      "counts": {
+        "surnames": 101622,
+        "givenNames": 45867
+      }
+    },
+    {
+      "id": "sudachi",
+      "description": "SudachiDict core_lex.csv・notcore_lex.csv の 名詞,固有名詞,人名,姓/名（small は unidic-small として別掲）",
+      "license": "Apache-2.0（Works Applications）。NEologd（Apache-2.0）等を含む（LEGAL 参照）",
+      "version": "20260723",
+      "url": "https://d2ej7fkh96fzlu.cloudfront.net/sudachidict-raw/20260723/",
+      "sha256": {
+        "core_lex.zip": "a2b39e1572adab08a649b1390b134517adc55f1d733c59358b113298788bf31c",
+        "notcore_lex.zip": "a15edc5193b42acfebdc220825d8c7edf0059bf950169d09bcdf6c426a81ecd1"
+      },
+      "fetchedAt": "2026-10-06",
+      "licenseFiles": [
+        "LICENSES/SudachiDict-LICENSE-2.0.txt",
+        "LICENSES/SudachiDict-LEGAL.txt",
+        "LICENSES/NEologd-unidic-COPYING.txt",
+        "LICENSES/NEologd-ipadic-COPYING.txt",
+        "LICENSES/UniDic-202512-BSD.txt",
+        "LICENSES/UniDic-202512-COPYING.txt"
+      ],
+      "counts": {
+        "surnames": 75767,
+        "givenNames": 101833
+      }
+    },
+    {
       "id": "unidic-small",
       "description": "UniDic small（SudachiDict small_lex.csv の 名詞,固有名詞,人名,姓/名）",
-      "license": "BSD-3-Clause（UniDic Consortium）",
+      "license": "修正BSD（UniDic Consortium）。SudachiDict の配布物として Apache-2.0",
       "version": "20260723",
       "url": "https://d2ej7fkh96fzlu.cloudfront.net/sudachidict-raw/20260723/small_lex.zip",
       "sha256": "b578ac9545899783d5d7e30d5d78d5d9dcf40b36965d4af0663ec2eb041c1093",
       "fetchedAt": "2026-10-06",
-      "licenseFile": "LICENSES/UniDic-BSD.txt",
+      "licenseFiles": [
+        "LICENSES/UniDic-202512-BSD.txt",
+        "LICENSES/UniDic-202512-COPYING.txt",
+        "LICENSES/SudachiDict-LEGAL.txt",
+        "LICENSES/SudachiDict-LICENSE-2.0.txt"
+      ],
       "counts": {
         "surnames": 15324,
         "givenNames": 30035
@@ -24,7 +81,9 @@
       "url": "https://sourceforge.net/projects/mecab/files/mecab-ipadic/2.7.0-20070801/mecab-ipadic-2.7.0-20070801.tar.gz/download",
       "sha256": "b62f527d881c504576baed9c6ef6561554658b175ce6ae0096a60307e49e3523",
       "fetchedAt": "2026-10-06",
-      "licenseFile": "LICENSES/mecab-ipadic-NAIST-ICOT.txt",
+      "licenseFiles": [
+        "LICENSES/mecab-ipadic-COPYING.txt"
+      ],
       "counts": {
         "surnames": 11864,
         "givenNames": 17640
@@ -39,7 +98,9 @@
       "query": "scripts/queries/",
       "snapshot": "data/wikidata/",
       "fetchedAt": "2026-10-06",
-      "licenseFile": "LICENSES/Wikidata-CC0.txt",
+      "licenseFiles": [
+        "LICENSES/CC0-1.0.txt"
+      ],
       "counts": {
         "surnames": 9754,
         "givenNames": 23804
@@ -47,7 +108,7 @@
     }
   ],
   "total": {
-    "surnames": 20508,
-    "givenNames": 50033
+    "surnames": 138193,
+    "givenNames": 149468
   }
 }

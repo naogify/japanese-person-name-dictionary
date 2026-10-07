@@ -5,7 +5,8 @@
 //   node scripts/build.mjs            .cache/ に無い出典を取得して data/ を生成
 //   node scripts/build.mjs --offline  取得せず .cache/ と data/wikidata/ だけで生成（再現確認用）
 // 出力: data/surnames.txt, data/given-names.txt（1行1語・畳み込み済み・重複なし）, data/sources.json
-// 出典: UniDic small（SudachiDict small_lex.csv）/ mecab-ipadic 2.7.0 Noun.name.csv / Wikidata
+// 出典: Mozc OSS 辞書 / SudachiDict（core・notcore）/ UniDic small（SudachiDict small_lex.csv）/ mecab-ipadic 2.7.0 Noun.name.csv / Wikidata
+// 出力: data/by-source/<出典>/ に出典ごとの語リスト、data/ に統合版
 // ============================================================================
 import fs from 'node:fs';
 import path from 'node:path';
@@ -22,13 +23,36 @@ const OFFLINE = process.argv.includes('--offline');
 /** 取得元の固定情報（版・URL・sha256） */
 const SUDACHI = {
   version: '20260723',
-  url: 'https://d2ej7fkh96fzlu.cloudfront.net/sudachidict-raw/20260723/small_lex.zip',
-  sha256: 'b578ac9545899783d5d7e30d5d78d5d9dcf40b36965d4af0663ec2eb041c1093',
+  base: 'https://d2ej7fkh96fzlu.cloudfront.net/sudachidict-raw/20260723/',
+  /** zip ごとの sha256（small = UniDic 由来、core / notcore = NEologd 等を含む部分） */
+  files: {
+    small: 'b578ac9545899783d5d7e30d5d78d5d9dcf40b36965d4af0663ec2eb041c1093',
+    core: 'a2b39e1572adab08a649b1390b134517adc55f1d733c59358b113298788bf31c',
+    notcore: 'a15edc5193b42acfebdc220825d8c7edf0059bf950169d09bcdf6c426a81ecd1',
+  },
 };
 const IPADIC = {
   version: '2.7.0-20070801',
   url: 'https://sourceforge.net/projects/mecab/files/mecab-ipadic/2.7.0-20070801/mecab-ipadic-2.7.0-20070801.tar.gz/download',
   sha256: 'b62f527d881c504576baed9c6ef6561554658b175ce6ae0096a60307e49e3523',
+};
+/** Mozc OSS 辞書（コミット SHA で固定。ファイルごとの sha256 も固定） */
+const MOZC = {
+  commit: '60fe4012e5eaa26805dbbb8e5548cbe6db4aaf98',
+  base: 'https://raw.githubusercontent.com/google/mozc/60fe4012e5eaa26805dbbb8e5548cbe6db4aaf98/src/data/dictionary_oss/',
+  files: {
+    'id.def': '07a05a268c3783b7e02b36e4aa591555a2dd19a1f3c93891576740761c154f2d',
+    'dictionary00.txt': '9e07ce292932c4fff327ed8cb06274c09acca556bd8bdf7c7ef1f6173eae3b61',
+    'dictionary01.txt': '836fd5fd8399510de0d8ef7b33be913cca6bbaee7b712cc8045fba03f4c75a89',
+    'dictionary02.txt': '93943858d0cfd092b849a78def6901eaf228177e1ac5663544e865a3a1e45a9e',
+    'dictionary03.txt': 'cb9f1b0b4a7550d682d86244a021cd17e0b15366328819e69135b5f183a1a24b',
+    'dictionary04.txt': '9fdc4e3948d03463de13ab5782adffbc11dd06e934cb80138c5920029cd3d2f6',
+    'dictionary05.txt': '199e3b0f050b691823ae7ba943090d437f51af6436b27c5f3dc69cafa12000e4',
+    'dictionary06.txt': 'b95b14f7770ae2a824bc8e9fad8b03c1bc45c504f93a36554b8b56daa0368d2a',
+    'dictionary07.txt': '7f53649b529d4c8c495d3a8dd9c4d489dfe7696080f7423107ff01331174be48',
+    'dictionary08.txt': '50a31bb5fc1646721b00be371a5695dffab1292bda143e1e59cc70cbbdd8643f',
+    'dictionary09.txt': '4e5fcd4cbfbf11395166a37b506f547fc54d20edc0884f5184ecd3fc705f0d9a',
+  },
 };
 const SPARQL = 'https://query.wikidata.org/sparql';
 
@@ -69,20 +93,23 @@ async function fetchPinned(spec, dest) {
 const cols = (line) => line.split(',');
 
 /**
- * UniDic small（SudachiDict small_lex.csv）から品詞「名詞,固有名詞,人名,姓/名」の表記を抜く。
+ * SudachiDict の語彙 CSV（small / core / notcore）から品詞「名詞,固有名詞,人名,姓/名」の表記を抜く。
+ * @param {string[]} names 読む CSV の名前（'small' | 'core' | 'notcore'）
  * @returns {Promise<{surnames: string[], givenNames: string[]}>}
  */
-async function readUnidicSmall() {
-  const zip = path.join(CACHE, 'sudachi', 'small_lex.zip');
-  await fetchPinned(SUDACHI, zip);
-  // unzip の標準出力へ展開して読む（巨大なので maxBuffer を広げる）
-  const csv = execFileSync('unzip', ['-p', zip, 'small_lex.csv'], { maxBuffer: 1 << 30 }).toString('utf-8');
+async function readSudachiLex(names) {
   const out = { surnames: [], givenNames: [] };
-  for (const line of csv.split('\n')) {
-    const c = cols(line);
-    if (c[5] !== '名詞' || c[6] !== '固有名詞' || c[7] !== '人名') continue;
-    if (c[8] === '姓') out.surnames.push(c[0]);
-    else if (c[8] === '名') out.givenNames.push(c[0]);
+  for (const name of names) {
+    const zip = path.join(CACHE, 'sudachi', `${name}_lex.zip`);
+    await fetchPinned({ url: `${SUDACHI.base}${name}_lex.zip`, sha256: SUDACHI.files[name] }, zip);
+    // unzip の標準出力へ展開して読む（巨大なので maxBuffer を広げる）
+    const csv = execFileSync('unzip', ['-p', zip, `${name}_lex.csv`], { maxBuffer: 1 << 30 }).toString('utf-8');
+    for (const line of csv.split('\n')) {
+      const c = cols(line);
+      if (c[5] !== '名詞' || c[6] !== '固有名詞' || c[7] !== '人名') continue;
+      if (c[8] === '姓') out.surnames.push(c[0]);
+      else if (c[8] === '名') out.givenNames.push(c[0]);
+    }
   }
   return out;
 }
@@ -102,6 +129,36 @@ async function readIpadic() {
     if (c[4] !== '名詞' || c[5] !== '固有名詞' || c[6] !== '人名') continue;
     if (c[7] === '姓') out.surnames.push(c[0]);
     else if (c[7] === '名') out.givenNames.push(c[0]);
+  }
+  return out;
+}
+
+/**
+ * Mozc OSS 辞書（dictionary00〜09.txt）から人名の姓・名の表記を抜く。
+ * 列は「読み TAB 左文脈ID TAB 右文脈ID TAB コスト TAB 表記」。左文脈 ID が id.def で
+ * 「名詞,固有名詞,人名,姓」「名詞,固有名詞,人名,名」になっている行を拾う（ID 番号は版で変わるので id.def から引く）。
+ * @returns {Promise<{surnames: string[], givenNames: string[]}>}
+ */
+async function readMozc() {
+  const dir = path.join(CACHE, 'mozc', MOZC.commit);
+  for (const [name, hash] of Object.entries(MOZC.files)) {
+    await fetchPinned({ url: MOZC.base + name, sha256: hash }, path.join(dir, name));
+  }
+  // id.def（「ID 品詞,…」）から姓・名の ID を引く
+  const ids = { surname: null, given: null };
+  for (const line of fs.readFileSync(path.join(dir, 'id.def'), 'utf-8').split('\n')) {
+    const [id, pos] = line.split(' ');
+    if (pos === '名詞,固有名詞,人名,姓,*,*,*') ids.surname = id;
+    if (pos === '名詞,固有名詞,人名,名,*,*,*') ids.given = id;
+  }
+  if (!ids.surname || !ids.given) throw new Error('id.def に姓・名の品詞 ID が無い');
+  const out = { surnames: [], givenNames: [] };
+  for (const name of Object.keys(MOZC.files).filter((n) => n.startsWith('dictionary'))) {
+    for (const line of fs.readFileSync(path.join(dir, name), 'utf-8').split('\n')) {
+      const c = line.split('\t');
+      if (c[1] === ids.surname) out.surnames.push(c[4]);
+      else if (c[1] === ids.given) out.givenNames.push(c[4]);
+    }
   }
   return out;
 }
@@ -141,14 +198,18 @@ function normalizeAll(words) {
   return set;
 }
 
-const unidic = await readUnidicSmall();
+const unidic = await readSudachiLex(['small']);
+const sudachi = await readSudachiLex(['core', 'notcore']);
 const ipadic = await readIpadic();
+const mozc = await readMozc();
 const wd = { surnames: await readWikidata('surnames'), givenNames: await readWikidata('given-names') };
 
 // 出典ごとの集合（件数の記録用）と、その和集合
 const per = {
   'unidic-small': { surnames: normalizeAll(unidic.surnames), givenNames: normalizeAll(unidic.givenNames) },
+  sudachi: { surnames: normalizeAll(sudachi.surnames), givenNames: normalizeAll(sudachi.givenNames) },
   ipadic: { surnames: normalizeAll(ipadic.surnames), givenNames: normalizeAll(ipadic.givenNames) },
+  mozc: { surnames: normalizeAll(mozc.surnames), givenNames: normalizeAll(mozc.givenNames) },
   wikidata: { surnames: normalizeAll(wd.surnames), givenNames: normalizeAll(wd.givenNames) },
 };
 const union = (key) => new Set(Object.values(per).flatMap((p) => [...p[key]]));
@@ -160,18 +221,34 @@ fs.mkdirSync(DATA, { recursive: true });
 const write = (file, set) => fs.writeFileSync(path.join(DATA, file), [...set].sort().join('\n') + '\n');
 write('surnames.txt', surnames);
 write('given-names.txt', givenNames);
+// 出典ごとの語リスト（どの語がどの出典か追える。1 出典だけ外して統合版を作り直せる）
+for (const [id, p] of Object.entries(per)) {
+  fs.mkdirSync(path.join(DATA, 'by-source', id), { recursive: true });
+  write(path.join('by-source', id, 'surnames.txt'), p.surnames);
+  write(path.join('by-source', id, 'given-names.txt'), p.givenNames);
+}
 
 const today = new Date().toISOString().slice(0, 10);
 const meta = {
   generatedAt: today,
   note: '件数は畳み込み・フィルタ・重複除去のあと。語そのものはここに載せない',
   sources: [
-    { id: 'unidic-small', description: 'UniDic small（SudachiDict small_lex.csv の 名詞,固有名詞,人名,姓/名）', license: 'BSD-3-Clause（UniDic Consortium）',
-      version: SUDACHI.version, url: SUDACHI.url, sha256: SUDACHI.sha256, fetchedAt: today, licenseFile: 'LICENSES/UniDic-BSD.txt' },
+    { id: 'mozc', description: 'Mozc OSS 辞書 dictionary00〜09.txt の 名詞,固有名詞,人名,姓/名（左文脈 ID を id.def から引く）',
+      license: 'Google の3条項BSD ＋ NAIST/ICOT 条項 ＋ 沖縄辞書（パブリックドメイン）',
+      version: MOZC.commit, url: MOZC.base, sha256: MOZC.files, fetchedAt: today,
+      licenseFiles: ['LICENSES/Mozc-LICENSE.txt'] },
+    { id: 'sudachi', description: 'SudachiDict core_lex.csv・notcore_lex.csv の 名詞,固有名詞,人名,姓/名（small は unidic-small として別掲）',
+      license: 'Apache-2.0（Works Applications）。NEologd（Apache-2.0）等を含む（LEGAL 参照）',
+      version: SUDACHI.version, url: SUDACHI.base, sha256: { 'core_lex.zip': SUDACHI.files.core, 'notcore_lex.zip': SUDACHI.files.notcore }, fetchedAt: today,
+      licenseFiles: ['LICENSES/SudachiDict-LICENSE-2.0.txt', 'LICENSES/SudachiDict-LEGAL.txt', 'LICENSES/NEologd-unidic-COPYING.txt', 'LICENSES/NEologd-ipadic-COPYING.txt', 'LICENSES/UniDic-202512-BSD.txt', 'LICENSES/UniDic-202512-COPYING.txt'] },
+    { id: 'unidic-small', description: 'UniDic small（SudachiDict small_lex.csv の 名詞,固有名詞,人名,姓/名）',
+      license: '修正BSD（UniDic Consortium）。SudachiDict の配布物として Apache-2.0',
+      version: SUDACHI.version, url: SUDACHI.base + 'small_lex.zip', sha256: SUDACHI.files.small, fetchedAt: today,
+      licenseFiles: ['LICENSES/UniDic-202512-BSD.txt', 'LICENSES/UniDic-202512-COPYING.txt', 'LICENSES/SudachiDict-LEGAL.txt', 'LICENSES/SudachiDict-LICENSE-2.0.txt'] },
     { id: 'ipadic', description: 'mecab-ipadic 2.7.0-20070801 Noun.name.csv（名詞,固有名詞,人名,姓/名）', license: 'NAIST/ICOT 条項',
-      version: IPADIC.version, url: IPADIC.url, sha256: IPADIC.sha256, fetchedAt: today, licenseFile: 'LICENSES/mecab-ipadic-NAIST-ICOT.txt' },
+      version: IPADIC.version, url: IPADIC.url, sha256: IPADIC.sha256, fetchedAt: today, licenseFiles: ['LICENSES/mecab-ipadic-COPYING.txt'] },
     { id: 'wikidata', description: 'Wikidata の日本語ラベル（姓 Q101352、名 Q202444/Q12308941/Q11879590/Q3409032）', license: 'CC0 1.0',
-      version: 'SPARQL スナップショット', url: SPARQL, query: 'scripts/queries/', snapshot: 'data/wikidata/', fetchedAt: today, licenseFile: 'LICENSES/Wikidata-CC0.txt' },
+      version: 'SPARQL スナップショット', url: SPARQL, query: 'scripts/queries/', snapshot: 'data/wikidata/', fetchedAt: today, licenseFiles: ['LICENSES/CC0-1.0.txt'] },
   ].map((s) => ({ ...s, counts: { surnames: per[s.id].surnames.size, givenNames: per[s.id].givenNames.size } })),
   total: { surnames: surnames.size, givenNames: givenNames.size },
 };
@@ -180,7 +257,8 @@ const metaPath = path.join(DATA, 'sources.json');
 if (OFFLINE && fs.existsSync(metaPath)) {
   const old = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
   meta.generatedAt = old.generatedAt;
-  meta.sources.forEach((s, i) => { s.fetchedAt = old.sources[i].fetchedAt; });
+  // 出典の並びが変わっても取り違えないよう id で引く（古い meta に無い出典は今日の日付のまま）
+  meta.sources.forEach((s) => { s.fetchedAt = old.sources.find((o) => o.id === s.id)?.fetchedAt ?? s.fetchedAt; });
 }
 fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2) + '\n');
 console.log(JSON.stringify(meta.sources.map((s) => [s.id, s.counts])), meta.total);

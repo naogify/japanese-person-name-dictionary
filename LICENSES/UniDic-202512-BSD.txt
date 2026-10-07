@@ -1,8 +1,4 @@
-UniDic（The UniDic Consortium）— 修正BSD（3条項BSD）ライセンス
-出典: SudachiDict の LEGAL（small_lex.csv は UniDic の一部）。https://github.com/WorksApplications/SudachiDict/blob/develop/LEGAL
-
-Copyright (c) 2011-2013, The UniDic Consortium
-All rights reserved.
+Copyright (c) 2023 National Institute for Japanese Language and Linguistics
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
