@@ -11,19 +11,31 @@
 - `LICENSES/`: 各出典のライセンス全文（原文のまま）
 - `THIRD_PARTY_NOTICES.md`: 出典ごとの名称・URL・版・ライセンス・表示物・義務の表
 
+## インストール
+
+```bash
+npm install @naogify/japanese-person-name-dictionary
+```
+
+Node.js 20 以上、ESM のみ。パッケージは約 2.5MB（展開後約 6MB）。
+
 ## 使い方
+
+判定器 [`@naogify/japanese-person-name-detector`](https://github.com/naogify/japanese-person-name-detector) はこの辞書を既定で使うので、
+判定だけなら判定器を入れれば足りる。辞書を直接使うときは次のとおり。
 
 ```js
 import { loadDictionary, fold } from '@naogify/japanese-person-name-dictionary';
-import { createDetector } from '@naogify/japanese-person-name-detector';
 
-const { surnames, givenNames } = loadDictionary();
-const detector = createDetector({ surnames, givenNames, mode: 'both' });
-// 辞書は畳み込み済みなので、判定対象も fold() を通す
-detector.looksLikePersonName(fold(name));
+const { surnames, givenNames } = loadDictionary(); // Set<string> が 2 つ（初回にファイルから読む）
+// 辞書は NFKC＋異体字の畳み込み済みなので、引く側も fold() を通す
+surnames.has(fold('髙橋')); // true
 ```
 
-npm には公開しない。`github:naogify/japanese-person-name-dictionary#<sha>` で参照する。
+- `loadDictionary()`: 統合版の姓・名を `Set<string>` で返す
+- `fold(s)`: 照合用の畳み込み（NFKC → 異体字を代表字へ。全角スペースの区切りは保つ）
+- `SURNAMES_PATH` / `GIVEN_NAMES_PATH`: 統合版ファイルの絶対パス
+- ファイルを直接読むこともできる: `@naogify/japanese-person-name-dictionary/surnames.txt`・`/given-names.txt`・`/sources.json`
 
 ## 同梱データの出典と条件
 
@@ -62,6 +74,16 @@ JMnedict（CC BY-SA 4.0）、工藤拓氏の人名データ zip（利用条件�
 - **コード**（`scripts/`・`src/`・`test/`）: MIT（`LICENSE`）
 - **データ**（`data/`）: MIT ではない。各出典の条件に従う（上の表・`THIRD_PARTY_NOTICES.md`）
 - 条件は公開文書から読み取ったもの。**法務の最終確認は別途**
+
+## 公開手順（npm）
+
+1. `package.json` の `version` を上げてコミットし、main にマージする
+2. GitHub で `v<version>` のタグの Release を作って公開する
+3. `.github/workflows/publish.yml` がテストしてから npm に公開する（provenance つき）
+
+初回だけは npm 上にパッケージが無く Trusted Publishing を登録できないので、
+`npm login` してから手元で `npm publish` するか、リポジトリの Secrets に `NPM_TOKEN` を入れてから Release を作る。
+公開後、npmjs.com のパッケージ設定で Trusted Publisher（このリポジトリ・`publish.yml`）を登録し、`NPM_TOKEN` は消してよい。
 
 ## 辞書の更新
 

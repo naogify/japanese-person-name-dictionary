@@ -1,22 +1,59 @@
 {
   "name": "@naogify/japanese-person-name-dictionary",
   "version": "0.1.0",
-  "description": "日本人の姓・名の辞書（Mozc・SudachiDict・UniDic small・mecab-ipadic・Wikidata から生成）",
+  "description": "日本人の姓・名の辞書（Mozc・SudachiDict・UniDic small・mecab-ipadic・Wikidata から生成。NFKC＋異体字の畳み込み済み）",
+  "keywords": [
+    "japanese",
+    "name",
+    "surname",
+    "given-name",
+    "dictionary",
+    "personal-name",
+    "姓",
+    "名",
+    "人名",
+    "辞書"
+  ],
+  "homepage": "https://github.com/naogify/japanese-person-name-dictionary#readme",
+  "bugs": {
+    "url": "https://github.com/naogify/japanese-person-name-dictionary/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/naogify/japanese-person-name-dictionary.git"
+  },
+  "author": "naogify",
   "license": "SEE LICENSE IN README.md",
-  "private": true,
   "type": "module",
   "main": "./src/index.mjs",
   "exports": {
     ".": "./src/index.mjs",
     "./surnames.txt": "./data/surnames.txt",
     "./given-names.txt": "./data/given-names.txt",
-    "./sources.json": "./data/sources.json"
+    "./sources.json": "./data/sources.json",
+    "./package.json": "./package.json"
   },
-  "files": ["src", "data", "scripts/fold.mjs", "LICENSES", "THIRD_PARTY_NOTICES.md", "LICENSE", "README.md"],
-  "engines": { "node": ">=20" },
+  "files": [
+    "src",
+    "data",
+    "!data/wikidata",
+    "scripts/fold.mjs",
+    "LICENSES",
+    "THIRD_PARTY_NOTICES.md",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "build:offline": "node scripts/build.mjs --offline",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "prepublishOnly": "npm test"
   }
 }
