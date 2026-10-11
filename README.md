@@ -78,11 +78,11 @@ JMnedict（CC BY-SA 4.0）、工藤拓氏の人名データ zip（利用条件�
 ## 公開手順（npm）
 
 1. `package.json` の `version` を上げてコミットし、main にマージする
-2. GitHub で `v<version>` のタグの Release を作って公開する
-3. `.github/workflows/publish.yml` がテストしてから npm に公開する（provenance つき）
+2. main で `v<version>` のタグを打って push する（`git tag v<version> && git push origin v<version>`）
+3. `.github/workflows/publish.yml` がテストしてから npm に公開する（provenance つき）。タグと version の不一致や main に無いコミットのタグでは公開しない
 
 初回だけは npm 上にパッケージが無く Trusted Publishing を登録できないので、
-`npm login` してから手元で `npm publish` するか、リポジトリの Secrets に `NPM_TOKEN` を入れてから Release を作る。
+`npm login` してから手元で `npm publish` するか、リポジトリの Secrets に `NPM_TOKEN` を入れてからタグを push する。
 公開後、npmjs.com のパッケージ設定で Trusted Publisher（このリポジトリ・`publish.yml`）を登録し、`NPM_TOKEN` は消してよい。
 
 ## 辞書の更新
