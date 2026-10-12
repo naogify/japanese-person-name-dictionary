@@ -1,6 +1,6 @@
 {
   "name": "@naogify/japanese-person-name-dictionary",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "日本人の姓・名の辞書（Mozc・SudachiDict・UniDic small・mecab-ipadic・Wikidata から生成。NFKC＋異体字の畳み込み済み）",
   "keywords": [
     "japanese",
